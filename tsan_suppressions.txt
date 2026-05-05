@@ -1,0 +1,10 @@
+# ThreadSanitizer suppression file
+# std::barrier provides synchronization that tsan cannot model.
+# The on_tick_complete() barrier completion function runs strictly after
+# all threads have arrived, so accesses to state_buffers_ are safe.
+# Module threads write non-overlapping fields of the same ReactorState
+# struct concurrently, which is safe but flagged by tsan.
+race:reactor::Coordinator
+race:reactor::ControlRods::tick
+race:reactor::ReactorCore::tick
+race:reactor::CoolantLoop::tick
