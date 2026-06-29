@@ -27,7 +27,7 @@ protected:
 
 TEST_F(CoolantLoopTest, SteadyStateIsStable) {
     // At steady state, Q_core ≈ Q_removed, so T_out should not change much
-    loop.tick(0.1, read, write);
+    loop.tick(std::chrono::duration<double>{0.1}, read, write);
 
     EXPECT_NEAR(write.coolant_outlet_temp, read.coolant_outlet_temp, 1.0);
 }
@@ -36,7 +36,7 @@ TEST_F(CoolantLoopTest, ReducedFlowIncreasesOutletTemp) {
     // Halving flow rate should cause outlet temp to rise
     read.pump_flow_rate = coolant.nominal_flow_rate / 2.0;
 
-    loop.tick(0.1, read, write);
+    loop.tick(std::chrono::duration<double>{0.1}, read, write);
 
     // Q_removed drops because flow drops, so T_out increases
     EXPECT_GT(write.coolant_outlet_temp, read.coolant_outlet_temp);
@@ -46,7 +46,7 @@ TEST_F(CoolantLoopTest, IncreasedFlowDecreasesOutletTemp) {
     // Doubling flow rate should cause outlet temp to fall
     read.pump_flow_rate = coolant.nominal_flow_rate * 2.0;
 
-    loop.tick(0.1, read, write);
+    loop.tick(std::chrono::duration<double>{0.1}, read, write);
 
     EXPECT_LT(write.coolant_outlet_temp, read.coolant_outlet_temp);
 }
@@ -55,13 +55,13 @@ TEST_F(CoolantLoopTest, HotterFuelIncreasesOutletTemp) {
     // If fuel is much hotter, more heat flows to coolant
     read.fuel_temperature = 1000.0;
 
-    loop.tick(0.1, read, write);
+    loop.tick(std::chrono::duration<double>{0.1}, read, write);
 
     EXPECT_GT(write.coolant_outlet_temp, read.coolant_outlet_temp);
 }
 
 TEST_F(CoolantLoopTest, InletTempIsConstant) {
-    loop.tick(0.1, read, write);
+    loop.tick(std::chrono::duration<double>{0.1}, read, write);
 
     EXPECT_DOUBLE_EQ(write.coolant_inlet_temp, coolant.inlet_temperature);
 }
@@ -69,7 +69,7 @@ TEST_F(CoolantLoopTest, InletTempIsConstant) {
 TEST_F(CoolantLoopTest, FlowRateIsPreserved) {
     read.pump_flow_rate = 12345.0;
 
-    loop.tick(0.1, read, write);
+    loop.tick(std::chrono::duration<double>{0.1}, read, write);
 
     EXPECT_DOUBLE_EQ(write.pump_flow_rate, 12345.0);
 }

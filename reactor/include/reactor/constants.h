@@ -1,5 +1,7 @@
 #pragma once
 
+#include <chrono>
+
 namespace reactor {
 
 struct NeutronicsParams {
@@ -30,7 +32,7 @@ struct CoolantParams {
 };
 
 struct SimulatorConfig {
-    double tick_period = 0.1;         // Tick period [s] (10 Hz)
+    std::chrono::duration<double> tick_period{0.1};         // Tick period [s] (10 Hz)
     NeutronicsParams neutronics;
     FuelParams fuel;
     ReactivityParams reactivity;

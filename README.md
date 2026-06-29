@@ -164,7 +164,7 @@ Every module implements:
 class Module {
 public:
     virtual ~Module() = default;
-    virtual void tick(double dt, const ReactorState& read, ReactorState& write) = 0;
+    virtual void tick(std::chrono::duration<double> dt, const ReactorState& read, ReactorState& write) = 0;
 };
 ```
 

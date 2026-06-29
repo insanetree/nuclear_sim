@@ -11,7 +11,7 @@ public:
                 const FuelParams& fuel,
                 const ReactivityParams& reactivity);
 
-    void tick(double dt, const ReactorState& read, ReactorState& write) override;
+    void tick(std::chrono::duration<double> dt, const ReactorState& read, ReactorState& write) override;
 
 private:
     NeutronicsParams neutronics_;

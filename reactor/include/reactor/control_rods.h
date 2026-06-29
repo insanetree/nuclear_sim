@@ -8,7 +8,7 @@ namespace reactor {
 class ControlRods : public Module {
 public:
     explicit ControlRods(const ReactivityParams& params);
-    void tick(double dt, const ReactorState& read, ReactorState& write) override;
+    void tick(std::chrono::duration<double> dt, const ReactorState& read, ReactorState& write) override;
 
 private:
     ReactivityParams params_;

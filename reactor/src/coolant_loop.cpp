@@ -6,7 +6,7 @@ CoolantLoop::CoolantLoop(const CoolantParams& params, const FuelParams& fuel)
     : params_(params)
     , fuel_(fuel) {}
 
-void CoolantLoop::tick(double dt, const ReactorState& read, ReactorState& write) {
+void CoolantLoop::tick(std::chrono::duration<double> dt, const ReactorState& read, ReactorState& write) {
     double T_out = read.coolant_outlet_temp;
     double T_in = params_.inlet_temperature;
     double flow = read.pump_flow_rate;
@@ -20,7 +20,7 @@ void CoolantLoop::tick(double dt, const ReactorState& read, ReactorState& write)
 
     // Coolant outlet temperature (forward Euler)
     double dT_out_dt = (Q_core - Q_removed) / (params_.mass_in_core * params_.specific_heat);
-    T_out += dT_out_dt * dt;
+    T_out += dT_out_dt * dt.count();
 
     write.coolant_inlet_temp = T_in;
     write.coolant_outlet_temp = T_out;

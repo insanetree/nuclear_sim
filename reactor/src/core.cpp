@@ -9,7 +9,7 @@ ReactorCore::ReactorCore(const NeutronicsParams& neutronics,
     , fuel_(fuel)
     , reactivity_(reactivity) {}
 
-void ReactorCore::tick(double dt, const ReactorState& read, ReactorState& write) {
+void ReactorCore::tick(std::chrono::duration<double> dt, const ReactorState& read, ReactorState& write) {
     double n = read.neutron_population;
     double C = read.precursor_concentration;
     double T_fuel = read.fuel_temperature;
@@ -26,8 +26,8 @@ void ReactorCore::tick(double dt, const ReactorState& read, ReactorState& write)
     double dC_dt = (neutronics_.beta / neutronics_.generation_time) * n
                    - neutronics_.lambda * C;
 
-    n += dn_dt * dt;
-    C += dC_dt * dt;
+    n += dn_dt * dt.count();
+    C += dC_dt * dt.count();
 
     // Clamp neutron population to prevent negative values
     if (n < 0.0) {
@@ -40,7 +40,7 @@ void ReactorCore::tick(double dt, const ReactorState& read, ReactorState& write)
     // Fuel temperature (forward Euler)
     double Q_to_coolant = fuel_.gap_conductance * (T_fuel - T_coolant);
     double dT_fuel_dt = (P_fission - Q_to_coolant) / (fuel_.mass * fuel_.specific_heat);
-    T_fuel += dT_fuel_dt * dt;
+    T_fuel += dT_fuel_dt * dt.count();
 
     write.neutron_population = n;
     write.precursor_concentration = C;

@@ -38,7 +38,7 @@ Coordinator::Coordinator(const SimulatorConfig& config)
     init_state(state_buffers_[1]);
 
     spdlog::info("Coordinator initialised — tick period: {:.3f}s, nominal power: {:.0f} MW",
-                 config_.tick_period, config_.neutronics.nominal_power / 1.0e6);
+                 config_.tick_period.count(), config_.neutronics.nominal_power / 1.0e6);
 }
 
 Coordinator::~Coordinator() {
@@ -54,8 +54,9 @@ void Coordinator::start() {
 
     auto make_thread = [this](Module& module) {
         return std::jthread([this, &module](std::stop_token st) {
+            auto tick_start = std::chrono::steady_clock::now();
+            auto tick_end = tick_start + config_.tick_period;
             while (!st.stop_requested()) {
-                auto tick_start = std::chrono::steady_clock::now();
 
                 auto ri = read_index_.load(std::memory_order_acquire);
                 const ReactorState& read = state_buffers_[ri];
@@ -64,13 +65,8 @@ void Coordinator::start() {
                 module.tick(config_.tick_period, read, write);
 
                 barrier_.arrive_and_wait();
-
-                // Sleep until next tick
-                auto elapsed = std::chrono::steady_clock::now() - tick_start;
-                auto target = std::chrono::duration<double>(config_.tick_period);
-                if (elapsed < target) {
-                    std::this_thread::sleep_for(target - elapsed);
-                }
+                std::this_thread::sleep_until(tick_end);
+                tick_end += config_.tick_period;
             }
         });
     };

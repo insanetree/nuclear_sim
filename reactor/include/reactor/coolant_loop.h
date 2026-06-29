@@ -8,7 +8,7 @@ namespace reactor {
 class CoolantLoop : public Module {
 public:
     explicit CoolantLoop(const CoolantParams& params, const FuelParams& fuel);
-    void tick(double dt, const ReactorState& read, ReactorState& write) override;
+    void tick(std::chrono::duration<double> dt, const ReactorState& read, ReactorState& write) override;
 
 private:
     CoolantParams params_;
