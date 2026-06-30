@@ -29,6 +29,7 @@ struct CoolantParams {
     double specific_heat = 4'180.0;   // Coolant specific heat [J/(kg·K)]
     double inlet_temperature = 290.0; // Cold leg temperature [°C]
     double nominal_flow_rate = 15'000.0; // Nominal pump flow rate [kg/s]
+    double max_flow_rate = 18'000.0;  // Maximum pump flow rate [kg/s]
 };
 
 struct TurbineParams {

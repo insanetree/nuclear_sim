@@ -2,6 +2,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include <algorithm>
 #include <chrono>
 
 namespace reactor {
@@ -120,8 +121,9 @@ void Coordinator::on_tick_complete() noexcept {
     std::size_t write_index = 1 - read_index_.load(std::memory_order_relaxed);
     state_buffers_[write_index].rod_target =
         commands_.rod_target.load(std::memory_order_relaxed);
-    state_buffers_[write_index].pump_flow_rate =
-        commands_.pump_flow_rate.load(std::memory_order_relaxed);
+    state_buffers_[write_index].pump_flow_rate = std::clamp(
+        commands_.pump_flow_rate.load(std::memory_order_relaxed),
+        0.0, config_.coolant.max_flow_rate);
 
     // Swap buffers
     read_index_.store(write_index, std::memory_order_release);
