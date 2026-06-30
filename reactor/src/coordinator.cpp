@@ -34,7 +34,11 @@ Coordinator::Coordinator(const SimulatorConfig& config)
               / (config.coolant.nominal_flow_rate * config.coolant.specific_heat);
         s.pump_flow_rate = config.coolant.nominal_flow_rate;
         s.heat_removal_rate = config.neutronics.nominal_power;
-        s.electrical_power = config.turbine.thermal_efficiency * config.neutronics.nominal_power;
+        // Carnot-fraction efficiency at the nominal outlet temperature
+        double nominal_efficiency = config.turbine.carnot_fraction
+            * (1.0 - (config.turbine.condenser_temperature + 273.15)
+                     / (s.coolant_outlet_temp + 273.15));
+        s.electrical_power = nominal_efficiency * config.neutronics.nominal_power;
     };
 
     init_state(state_buffers_[0]);

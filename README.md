@@ -140,15 +140,16 @@ $$\tau_c = \frac{M_c \cdot c_p}{\dot{m} \cdot c_p} = \frac{M_c}{\dot{m}} = \frac
 
 ### 5. Turbine (Power Conversion)
 
-The secondary side is modeled as an ideal energy-balance conversion: the heat carried away by the primary coolant is delivered to the steam generator and converted to gross electrical power at a fixed thermal-to-electric efficiency:
+The secondary side converts the heat carried away by the primary coolant into gross electrical power. The conversion efficiency is a fixed fraction of the ideal Carnot limit set by the hot-leg (coolant outlet) and condenser temperatures, so hotter coolant converts more efficiently:
 
-$$P_{\text{electric}} = \eta_{\text{th}} \cdot Q_{\text{removed}}$$
+$$P_{\text{electric}} = \eta(T_{\text{out}}) \cdot Q_{\text{removed}}, \qquad \eta(T_{\text{out}}) = \eta_{\text{rel}} \left(1 - \frac{T_{\text{cold}}}{T_{\text{hot}}}\right)$$
 
-where $Q_{\text{removed}} = \dot{m} \cdot c_p \cdot (T_{\text{out}} - T_{\text{in}})$ is the heat removed by the coolant loop. Because the conversion has no state of its own, electrical output tracks coolant flow and temperature directly (with the usual one-tick double-buffer lag).
+where $T_{\text{hot}} = T_{\text{out}} + 273.15$ K, $T_{\text{cold}} = T_{\text{condenser}} + 273.15$ K, and $Q_{\text{removed}} = \dot{m} \cdot c_p \cdot (T_{\text{out}} - T_{\text{in}})$ is the heat removed by the coolant loop. At nominal conditions ($T_{\text{out}} \approx 338\,°$C) this yields $\eta \approx 0.33$. Because the conversion has no state of its own, electrical output tracks coolant flow and temperature directly (with the usual one-tick double-buffer lag).
 
 | Parameter | Symbol | Default Value | Unit |
 |-----------|--------|---------------|------|
-| Thermal-to-electric efficiency | $\eta_{\text{th}}$ | 0.33 | — |
+| Carnot fraction (relative efficiency) | $\eta_{\text{rel}}$ | 0.655 | — |
+| Condenser temperature | $T_{\text{condenser}}$ | 30 | °C |
 
 ### Nominal Steady-State Operating Point
 
@@ -220,7 +221,7 @@ public:
 
 - **Xenon poisoning**: Xe-135 buildup/decay affecting reactivity ($\rho_{\text{Xe}}$)
 - **Void coefficient**: reduced moderation at high coolant temperature
-- **Secondary loop dynamics**: steam generator thermal inertia, condenser, temperature-dependent (Carnot) efficiency
+- **Secondary loop dynamics**: steam generator thermal inertia, condenser dynamics, pump-power penalty for a net-power optimum
 - **Multiple delayed neutron groups**: 6-group model for higher fidelity
 - **Decay heat**: residual heat after shutdown
 

@@ -33,7 +33,8 @@ struct CoolantParams {
 };
 
 struct TurbineParams {
-    double thermal_efficiency = 0.33; // Thermal-to-electric conversion efficiency [-]
+    double condenser_temperature = 30.0; // Cold-sink (condenser) temperature [°C]
+    double carnot_fraction = 0.655;      // Fraction of ideal Carnot efficiency achieved [-]
 };
 
 struct SimulatorConfig {
