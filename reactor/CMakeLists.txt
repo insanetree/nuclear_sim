@@ -11,6 +11,10 @@ target_include_directories(reactor PUBLIC include)
 target_link_libraries(reactor PUBLIC logging)
 set_project_warnings(reactor)
 
+add_executable(reactor_sim src/main.cpp)
+target_link_libraries(reactor_sim PRIVATE reactor)
+set_project_warnings(reactor_sim)
+
 add_executable(test_control_rods test/test_control_rods.cpp)
 target_link_libraries(test_control_rods PRIVATE reactor GTest::gtest_main)
 set_project_warnings(test_control_rods)
