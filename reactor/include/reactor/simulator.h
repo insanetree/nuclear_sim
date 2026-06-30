@@ -24,6 +24,7 @@ public:
 
     // Queries (thread-safe, reads latest completed state)
     double get_thermal_power() const;
+    double get_electrical_power() const;
     double get_fuel_temperature() const;
     double get_coolant_outlet_temperature() const;
     double get_coolant_inlet_temperature() const;

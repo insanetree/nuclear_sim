@@ -4,6 +4,7 @@ add_library(reactor
     src/coolant_loop.cpp
     src/coordinator.cpp
     src/simulator.cpp
+    src/turbine.cpp
 )
 
 target_include_directories(reactor PUBLIC include)
@@ -24,6 +25,11 @@ add_executable(test_coolant_loop test/test_coolant_loop.cpp)
 target_link_libraries(test_coolant_loop PRIVATE reactor GTest::gtest_main)
 set_project_warnings(test_coolant_loop)
 add_test(NAME test_coolant_loop COMMAND test_coolant_loop)
+
+add_executable(test_turbine test/test_turbine.cpp)
+target_link_libraries(test_turbine PRIVATE reactor GTest::gtest_main)
+set_project_warnings(test_turbine)
+add_test(NAME test_turbine COMMAND test_turbine)
 
 add_executable(test_coordinator test/test_coordinator.cpp)
 target_link_libraries(test_coordinator PRIVATE reactor GTest::gtest_main)

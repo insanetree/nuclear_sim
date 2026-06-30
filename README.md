@@ -7,14 +7,14 @@ A real-time pressurized water reactor (PWR) simulator with heartbeat-synchronize
 The simulator is composed of independent modules, each running on its own thread. All modules are synchronized via a `std::barrier` — every tick, each module reads its inputs, computes, writes its outputs, and waits at the barrier. The barrier's completion function swaps the output buffers so that the next tick's inputs reflect the previous tick's outputs.
 
 ```
-┌─────────────┐     ┌──────────────┐     ┌──────────────┐
-│ ControlRods │────▶│  ReactorCore │────▶│  CoolantLoop │
-│  (module)   │ ρ   │   (module)   │  Q  │   (module)   │
-└─────────────┘     └──────────────┘     └──────────────┘
-       ▲                                        │
-       │            ┌──────────────┐            │
-       └────────────│  Coordinator │◀───────────┘
-         commands   │  (barrier)   │  T_coolant
+┌─────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│ ControlRods │────▶│  ReactorCore │────▶│  CoolantLoop │────▶│   Turbine    │
+│  (module)   │ ρ   │   (module)   │  Q  │   (module)   │  Q  │   (module)   │
+└─────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
+       ▲                                        │                    │
+       │            ┌──────────────┐            │                    │
+       └────────────│  Coordinator │◀───────────┴────────────────────┘
+         commands   │  (barrier)   │  T_coolant, P_electric
                     └──────────────┘
 ```
 
@@ -23,7 +23,8 @@ The simulator is composed of independent modules, each running on its own thread
 1. **ControlRods** receives a target position command and outputs the current rod position (which determines reactivity).
 2. **ReactorCore** takes rod reactivity and coolant temperature, solves neutron kinetics and fuel thermal equations, and outputs thermal power and fuel temperature.
 3. **CoolantLoop** takes thermal power and pump flow rate, computes heat removal and coolant temperatures.
-4. **Coordinator** manages the tick clock and `std::barrier`, swapping double-buffered state each tick.
+4. **Turbine** takes the heat removed by the coolant and converts it to gross electrical power output.
+5. **Coordinator** manages the tick clock and `std::barrier`, swapping double-buffered state each tick.
 
 ### Double Buffering
 
@@ -137,6 +138,18 @@ The coolant thermal time constant is:
 
 $$\tau_c = \frac{M_c \cdot c_p}{\dot{m} \cdot c_p} = \frac{M_c}{\dot{m}} = \frac{20000}{15000} \approx 1.3 \text{ s}$$
 
+### 5. Turbine (Power Conversion)
+
+The secondary side is modeled as an ideal energy-balance conversion: the heat carried away by the primary coolant is delivered to the steam generator and converted to gross electrical power at a fixed thermal-to-electric efficiency:
+
+$$P_{\text{electric}} = \eta_{\text{th}} \cdot Q_{\text{removed}}$$
+
+where $Q_{\text{removed}} = \dot{m} \cdot c_p \cdot (T_{\text{out}} - T_{\text{in}})$ is the heat removed by the coolant loop. Because the conversion has no state of its own, electrical output tracks coolant flow and temperature directly (with the usual one-tick double-buffer lag).
+
+| Parameter | Symbol | Default Value | Unit |
+|-----------|--------|---------------|------|
+| Thermal-to-electric efficiency | $\eta_{\text{th}}$ | 0.33 | — |
+
 ### Nominal Steady-State Operating Point
 
 At full power with rods fully withdrawn:
@@ -144,6 +157,7 @@ At full power with rods fully withdrawn:
 | Quantity | Value |
 |----------|-------|
 | Thermal power | 3000 MW |
+| Electrical power | ~990 MW |
 | Fuel temperature | ~614 °C |
 | Coolant inlet | 290 °C |
 | Coolant outlet | ~338 °C |
@@ -191,6 +205,7 @@ public:
 
     // Queries (thread-safe, reads latest completed state)
     double get_thermal_power() const;
+    double get_electrical_power() const;
     double get_fuel_temperature() const;
     double get_coolant_outlet_temperature() const;
     double get_coolant_inlet_temperature() const;
@@ -205,7 +220,7 @@ public:
 
 - **Xenon poisoning**: Xe-135 buildup/decay affecting reactivity ($\rho_{\text{Xe}}$)
 - **Void coefficient**: reduced moderation at high coolant temperature
-- **Secondary loop**: steam generator, turbine, condenser
+- **Secondary loop dynamics**: steam generator thermal inertia, condenser, temperature-dependent (Carnot) efficiency
 - **Multiple delayed neutron groups**: 6-group model for higher fidelity
 - **Decay heat**: residual heat after shutdown
 

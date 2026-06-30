@@ -11,6 +11,7 @@ Coordinator::Coordinator(const SimulatorConfig& config)
     , control_rods_(config.reactivity)
     , reactor_core_(config.neutronics, config.fuel, config.reactivity)
     , coolant_loop_(config.coolant, config.fuel)
+    , turbine_(config.turbine)
     , barrier_(kNumModules, [this]() noexcept { on_tick_complete(); }) {
 
     // Initialise steady-state in both buffers
@@ -32,6 +33,7 @@ Coordinator::Coordinator(const SimulatorConfig& config)
               / (config.coolant.nominal_flow_rate * config.coolant.specific_heat);
         s.pump_flow_rate = config.coolant.nominal_flow_rate;
         s.heat_removal_rate = config.neutronics.nominal_power;
+        s.electrical_power = config.turbine.thermal_efficiency * config.neutronics.nominal_power;
     };
 
     init_state(state_buffers_[0]);
@@ -49,14 +51,15 @@ void Coordinator::start() {
     if (running_.exchange(true)) {
         return;
     }
+    stopping_.store(false, std::memory_order_relaxed);
 
     spdlog::info("Starting reactor simulation");
 
     auto make_thread = [this](Module& module) {
-        return std::jthread([this, &module](std::stop_token st) {
+        return std::jthread([this, &module]() {
             auto tick_start = std::chrono::steady_clock::now();
             auto tick_end = tick_start + config_.tick_period;
-            while (!st.stop_requested()) {
+            while (true) {
 
                 auto ri = read_index_.load(std::memory_order_acquire);
                 const ReactorState& read = state_buffers_[ri];
@@ -65,6 +68,10 @@ void Coordinator::start() {
                 module.tick(config_.tick_period, read, write);
 
                 barrier_.arrive_and_wait();
+                if (stopping_.load(std::memory_order_acquire)) {
+                    break;
+                }
+
                 std::this_thread::sleep_until(tick_end);
                 tick_end += config_.tick_period;
             }
@@ -74,6 +81,7 @@ void Coordinator::start() {
     module_threads_[0] = make_thread(control_rods_);
     module_threads_[1] = make_thread(reactor_core_);
     module_threads_[2] = make_thread(coolant_loop_);
+    module_threads_[3] = make_thread(turbine_);
 }
 
 void Coordinator::stop() {
@@ -118,6 +126,11 @@ void Coordinator::on_tick_complete() noexcept {
     // Swap buffers
     read_index_.store(write_index, std::memory_order_release);
     tick_count_.fetch_add(1, std::memory_order_relaxed);
+
+    // Decide collectively whether this is the final tick. Running once per
+    // barrier phase, this guarantees every module observes the same value and
+    // therefore arrives at every phase, so shutdown cannot deadlock.
+    stopping_.store(!running_.load(std::memory_order_relaxed), std::memory_order_relaxed);
 }
 
 } // namespace reactor

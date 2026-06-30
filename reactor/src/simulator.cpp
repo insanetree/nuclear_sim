@@ -31,6 +31,10 @@ double Simulator::get_thermal_power() const {
     return coordinator_->current_state().thermal_power;
 }
 
+double Simulator::get_electrical_power() const {
+    return coordinator_->current_state().electrical_power;
+}
+
 double Simulator::get_fuel_temperature() const {
     return coordinator_->current_state().fuel_temperature;
 }

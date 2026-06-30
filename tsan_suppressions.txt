@@ -8,3 +8,4 @@ race:reactor::Coordinator
 race:reactor::ControlRods::tick
 race:reactor::ReactorCore::tick
 race:reactor::CoolantLoop::tick
+race:reactor::Turbine::tick

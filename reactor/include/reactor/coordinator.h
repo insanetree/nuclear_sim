@@ -5,6 +5,7 @@
 #include "reactor/coolant_loop.h"
 #include "reactor/core.h"
 #include "reactor/reactor_state.h"
+#include "reactor/turbine.h"
 
 #include <array>
 #include <atomic>
@@ -53,14 +54,16 @@ private:
     ControlRods control_rods_;
     ReactorCore reactor_core_;
     CoolantLoop coolant_loop_;
+    Turbine turbine_;
 
     // Synchronisation
-    static constexpr int kNumModules = 3;
+    static constexpr int kNumModules = 4;
     std::barrier<std::function<void()>> barrier_;
 
     // Threads
     std::array<std::jthread, kNumModules> module_threads_;
     std::atomic<bool> running_{false};
+    std::atomic<bool> stopping_{false};
     std::atomic<uint64_t> tick_count_{0};
 };
 

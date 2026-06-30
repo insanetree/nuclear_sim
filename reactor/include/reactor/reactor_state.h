@@ -23,6 +23,9 @@ struct ReactorState {
     double coolant_outlet_temp = 338.0;// Coolant outlet temperature [°C]
     double pump_flow_rate = 15'000.0;  // Pump mass flow rate [kg/s]
     double heat_removal_rate = 3.0e9;  // Heat removed by coolant [W]
+
+    // Power conversion (secondary side)
+    double electrical_power = 9.9e8;   // Gross electrical power output [W]
 };
 
 // Commands from external interface, applied atomically at tick boundaries

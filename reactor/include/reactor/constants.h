@@ -31,12 +31,17 @@ struct CoolantParams {
     double nominal_flow_rate = 15'000.0; // Nominal pump flow rate [kg/s]
 };
 
+struct TurbineParams {
+    double thermal_efficiency = 0.33; // Thermal-to-electric conversion efficiency [-]
+};
+
 struct SimulatorConfig {
     std::chrono::duration<double> tick_period{0.1};         // Tick period [s] (10 Hz)
     NeutronicsParams neutronics;
     FuelParams fuel;
     ReactivityParams reactivity;
     CoolantParams coolant;
+    TurbineParams turbine;
 };
 
 } // namespace reactor
