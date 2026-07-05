@@ -26,10 +26,10 @@ public:
     void start();
     void stop();
 
-    // Access to the latest completed state (safe to call from any thread
-    // only between ticks or when stopped — the Simulator wrapper handles
-    // thread safety for the external API).
-    const ReactorState& current_state() const;
+    // Coherent copy of the latest completed state. Uses tick_count_ as a
+    // seqlock so the returned snapshot never spans a buffer swap (all fields
+    // come from the same tick). Safe to call from any thread.
+    ReactorState get_reactor_state() const;
 
     // Access to commands (atomics, safe from any thread)
     Commands& commands();

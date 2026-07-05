@@ -22,11 +22,12 @@ TEST(SimulatorTest, InitialStateIsNominal) {
     Simulator sim(config);
 
     // Before starting, state should be at nominal
-    EXPECT_NEAR(sim.get_thermal_power(), config.neutronics.nominal_power, 1e6);
-    EXPECT_NEAR(sim.get_fuel_temperature(), config.fuel.ref_temperature, 1.0);
-    EXPECT_NEAR(sim.get_coolant_inlet_temperature(), config.coolant.inlet_temperature, 0.1);
-    EXPECT_NEAR(sim.get_pump_flow_rate(), config.coolant.nominal_flow_rate, 1.0);
-    EXPECT_NEAR(sim.get_control_rod_position(), 100.0, 0.1);
+    const ReactorState s = sim.get_reactor_state();
+    EXPECT_NEAR(s.thermal_power, config.neutronics.nominal_power, 1e6);
+    EXPECT_NEAR(s.fuel_temperature, config.fuel.ref_temperature, 1.0);
+    EXPECT_NEAR(s.coolant_inlet_temp, config.coolant.inlet_temperature, 0.1);
+    EXPECT_NEAR(s.pump_flow_rate, config.coolant.nominal_flow_rate, 1.0);
+    EXPECT_NEAR(s.rod_position, 100.0, 0.1);
 }
 
 TEST(SimulatorTest, ControlRodCommandIsApplied) {
@@ -40,7 +41,7 @@ TEST(SimulatorTest, ControlRodCommandIsApplied) {
     sim.stop();
 
     // Rod should have moved from 100 toward 50 (speed 2%/s, 0.5s → moved ~1%)
-    EXPECT_LT(sim.get_control_rod_position(), 100.0);
+    EXPECT_LT(sim.get_reactor_state().rod_position, 100.0);
 }
 
 TEST(SimulatorTest, PumpFlowRateCommandIsApplied) {
@@ -52,7 +53,7 @@ TEST(SimulatorTest, PumpFlowRateCommandIsApplied) {
 
     sim.stop();
 
-    EXPECT_NEAR(sim.get_pump_flow_rate(), 10'000.0, 1.0);
+    EXPECT_NEAR(sim.get_reactor_state().pump_flow_rate, 10'000.0, 1.0);
 }
 
 TEST(SimulatorTest, StableAtNominalConditions) {
@@ -66,11 +67,12 @@ TEST(SimulatorTest, StableAtNominalConditions) {
     sim.stop();
 
     // Power should remain near nominal (within 10%)
-    EXPECT_NEAR(sim.get_thermal_power(), config.neutronics.nominal_power,
+    const ReactorState s = sim.get_reactor_state();
+    EXPECT_NEAR(s.thermal_power, config.neutronics.nominal_power,
                 config.neutronics.nominal_power * 0.1);
     // Temperatures should be reasonable
-    EXPECT_GT(sim.get_fuel_temperature(), 200.0);
-    EXPECT_LT(sim.get_fuel_temperature(), 2000.0);
-    EXPECT_GT(sim.get_coolant_outlet_temperature(), 280.0);
-    EXPECT_LT(sim.get_coolant_outlet_temperature(), 400.0);
+    EXPECT_GT(s.fuel_temperature, 200.0);
+    EXPECT_LT(s.fuel_temperature, 2000.0);
+    EXPECT_GT(s.coolant_outlet_temp, 280.0);
+    EXPECT_LT(s.coolant_outlet_temp, 400.0);
 }

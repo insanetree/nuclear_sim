@@ -108,8 +108,19 @@ void Coordinator::stop() {
     }
 }
 
-const ReactorState& Coordinator::current_state() const {
-    return state_buffers_[read_index_.load(std::memory_order_acquire)];
+ReactorState Coordinator::get_reactor_state() const {
+    // Seqlock keyed on tick_count_: if no tick completed while we were copying,
+    // read_index_ stayed put and the buffer we copied belongs to a single tick.
+    ReactorState out;
+    uint64_t t1;
+    uint64_t t2;
+    do {
+        t1 = tick_count_.load(std::memory_order_acquire);
+        out = state_buffers_[read_index_.load(std::memory_order_acquire)];
+        std::atomic_thread_fence(std::memory_order_acquire);
+        t2 = tick_count_.load(std::memory_order_acquire);
+    } while (t1 != t2);
+    return out;
 }
 
 Commands& Coordinator::commands() {
@@ -131,7 +142,7 @@ void Coordinator::on_tick_complete() noexcept {
 
     // Swap buffers
     read_index_.store(write_index, std::memory_order_release);
-    tick_count_.fetch_add(1, std::memory_order_relaxed);
+    tick_count_.fetch_add(1, std::memory_order_release);
 
     // Decide collectively whether this is the final tick. Running once per
     // barrier phase, this guarantees every module observes the same value and

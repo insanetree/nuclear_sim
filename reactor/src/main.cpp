@@ -33,20 +33,22 @@ int main() {
         const double elapsed =
             std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
 
+        const reactor::ReactorState s = sim.get_reactor_state();
+
         spdlog::info(
             "t={:5.1f}s tick={:5} | P_th={:7.1f} MW | P_el={:7.1f} MW | "
             "T_fuel={:6.1f} C | T_out={:6.1f} C | T_in={:6.1f} C | "
             "flow={:8.1f} kg/s | rods={:5.1f}% | rho={:+.5f}",
             elapsed,
             sim.get_tick_count(),
-            sim.get_thermal_power() / 1.0e6,
-            sim.get_electrical_power() / 1.0e6,
-            sim.get_fuel_temperature(),
-            sim.get_coolant_outlet_temperature(),
-            sim.get_coolant_inlet_temperature(),
-            sim.get_pump_flow_rate(),
-            sim.get_control_rod_position(),
-            sim.get_reactivity());
+            s.thermal_power / 1.0e6,
+            s.electrical_power / 1.0e6,
+            s.fuel_temperature,
+            s.coolant_outlet_temp,
+            s.coolant_inlet_temp,
+            s.pump_flow_rate,
+            s.rod_position,
+            s.reactivity);
     }
 
     sim.stop();

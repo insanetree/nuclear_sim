@@ -23,14 +23,7 @@ public:
     void set_pump_flow_rate(double kg_per_sec);
 
     // Queries (thread-safe, reads latest completed state)
-    double get_thermal_power() const;
-    double get_electrical_power() const;
-    double get_fuel_temperature() const;
-    double get_coolant_outlet_temperature() const;
-    double get_coolant_inlet_temperature() const;
-    double get_pump_flow_rate() const;
-    double get_control_rod_position() const;
-    double get_reactivity() const;
+    ReactorState get_reactor_state() const;
     uint64_t get_tick_count() const;
 
 private:
