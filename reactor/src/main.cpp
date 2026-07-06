@@ -1,9 +1,49 @@
 #include "reactor/simulator.h"
+#include "reactor/ipc.h"
 
 #include <spdlog/spdlog.h>
 
 #include <chrono>
+#include <cstring>
+#include <new>
 #include <thread>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+namespace {
+
+// Create, size, and map a POSIX shared-memory segment, then construct a fresh T
+// in it (sets the magic value, zero-inits the atomics). Returns a pointer into
+// the mapped region, or nullptr on failure. On success the fd can be closed;
+// the mapping stays valid.
+template <typename T>
+T* create_and_map(const char* name, int& fd) {
+    fd = shm_open(name, O_CREAT | O_RDWR, 0666);
+    if (fd == -1) {
+        spdlog::error("shm_open({}) failed: {}", name, std::strerror(errno));
+        return nullptr;
+    }
+    if (ftruncate(fd, sizeof(T)) == -1) {
+        spdlog::error("ftruncate({}) failed: {}", name, std::strerror(errno));
+        close(fd);
+        shm_unlink(name);
+        fd = -1;
+        return nullptr;
+    }
+    void* addr = mmap(nullptr, sizeof(T), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (addr == MAP_FAILED) {
+        spdlog::error("mmap({}) failed: {}", name, std::strerror(errno));
+        close(fd);
+        shm_unlink(name);
+        fd = -1;
+        return nullptr;
+    }
+    return new (addr) T{};
+}
+
+} // namespace
 
 extern "C" const char* __tsan_default_suppressions() {
     return
@@ -16,6 +56,21 @@ extern "C" const char* __tsan_default_suppressions() {
 
 int main() {
     using namespace std::chrono_literals;
+
+    // Owner side: create and map the two shared-memory segments the external
+    // controller attaches to. `control` is written by the controller and read
+    // here; `status` is written here and read by the controller.
+    int control_panel_fd = -1;
+    int status_panel_fd = -1;
+    reactor::control_panel* control =
+        create_and_map<reactor::control_panel>(reactor::shm_control_panel_name, control_panel_fd);
+    reactor::status_panel* status =
+        create_and_map<reactor::status_panel>(reactor::shm_status_panel_name, status_panel_fd);
+    if (control == nullptr || status == nullptr) {
+        return 1;
+    }
+    close(control_panel_fd);
+    close(status_panel_fd);
 
     reactor::Simulator sim;
     sim.start();
@@ -52,5 +107,11 @@ int main() {
     }
 
     sim.stop();
+
+    // Unmap and remove the segments (owner cleans up so they don't persist).
+    munmap(control, sizeof(reactor::control_panel));
+    munmap(status, sizeof(reactor::status_panel));
+    shm_unlink(reactor::shm_control_panel_name);
+    shm_unlink(reactor::shm_status_panel_name);
     return 0;
 }
