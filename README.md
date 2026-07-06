@@ -11,8 +11,8 @@ The simulator is composed of independent modules, each running on its own thread
 │ ControlRods │───▶│  ReactorCore │───▶│  CoolantLoop │───▶│   Turbine    │
 │  (module)   │ ρ   │   (module)   │  Q  │   (module)   │  Q  │   (module)   │
 └─────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
-       ▲                                        │                    │
-       │            ┌──────────────┐            │                    │
+       ▲                                         │                    │
+       │            ┌──────────────┐             │                    │
        └────────────│  Coordinator │◀───────────┴────────────────────┘
          commands   │  (barrier)   │  T_coolant, P_electric
                     └──────────────┘
