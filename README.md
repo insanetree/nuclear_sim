@@ -8,7 +8,7 @@ The simulator is composed of independent modules, each running on its own thread
 
 ```
 ┌─────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│ ControlRods │────▶│  ReactorCore │────▶│  CoolantLoop │────▶│   Turbine    │
+│ ControlRods │───▶│  ReactorCore │───▶│  CoolantLoop │───▶│   Turbine    │
 │  (module)   │ ρ   │   (module)   │  Q  │   (module)   │  Q  │   (module)   │
 └─────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
        ▲                                        │                    │
