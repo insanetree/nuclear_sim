@@ -117,7 +117,6 @@ ReactorState Coordinator::get_reactor_state() const {
     do {
         t1 = tick_count_.load(std::memory_order_acquire);
         out = state_buffers_[read_index_.load(std::memory_order_acquire)];
-        std::atomic_thread_fence(std::memory_order_acquire);
         t2 = tick_count_.load(std::memory_order_acquire);
     } while (t1 != t2);
     return out;

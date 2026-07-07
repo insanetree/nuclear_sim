@@ -19,6 +19,8 @@ namespace reactor {
         std::atomic<double> electrical_power;
         std::atomic<double> coolant_inlet_temperature;
         std::atomic<double> coolant_outlet_temperature;
+        std::atomic_uint64_t tick_1;
+        std::atomic_uint64_t tick_2;
     };
 
     static_assert(std::atomic<double>::is_always_lock_free,

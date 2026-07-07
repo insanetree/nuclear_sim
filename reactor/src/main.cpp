@@ -73,37 +73,59 @@ int main() {
     close(status_panel_fd);
 
     reactor::Simulator sim;
+
+    reactor::ReactorState reactor_state  = sim.get_reactor_state();
+    control->control_rod_target.store(reactor_state.rod_target);
+    control->pump_flow_target.store(reactor_state.pump_flow_rate);
     sim.start();
 
     const auto run_duration = 60s;
+    const auto update_interval = 10ms;
     const auto report_interval = 500ms;
 
     const auto start = std::chrono::steady_clock::now();
+    auto curr_time = start;
+    auto next_update = start + update_interval;
     auto next_report = start + report_interval;
 
-    while (std::chrono::steady_clock::now() - start < run_duration) {
-        std::this_thread::sleep_until(next_report);
-        next_report += report_interval;
-
-        const double elapsed =
-            std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+    while (curr_time - start < run_duration) {
+        std::this_thread::sleep_until(next_update);
+        next_update += update_interval;
+        curr_time = std::chrono::steady_clock::now();
 
         const reactor::ReactorState s = sim.get_reactor_state();
+        const uint64_t tick = sim.get_tick_count();
 
-        spdlog::info(
-            "t={:5.1f}s tick={:5} | P_th={:7.1f} MW | P_el={:7.1f} MW | "
-            "T_fuel={:6.1f} C | T_out={:6.1f} C | T_in={:6.1f} C | "
-            "flow={:8.1f} kg/s | rods={:5.1f}% | rho={:+.5f}",
-            elapsed,
-            sim.get_tick_count(),
-            s.thermal_power / 1.0e6,
-            s.electrical_power / 1.0e6,
-            s.fuel_temperature,
-            s.coolant_outlet_temp,
-            s.coolant_inlet_temp,
-            s.pump_flow_rate,
-            s.rod_position,
-            s.reactivity);
+        status->tick_1.store(tick);
+        status->control_rod_position.store(s.rod_position, std::memory_order_relaxed);             
+        status->pump_flow_rate.store(s.pump_flow_rate, std::memory_order_relaxed);               
+        status->thermal_power.store(s.thermal_power, std::memory_order_relaxed);
+        status->electrical_power.store(s.electrical_power, std::memory_order_relaxed);
+        status->coolant_inlet_temperature.store(s.coolant_inlet_temp, std::memory_order_relaxed);
+        status->coolant_outlet_temperature.store(s.coolant_outlet_temp, std::memory_order_relaxed);
+        status->tick_2.store(tick);
+
+        sim.set_pump_flow_rate(control->pump_flow_target.load(std::memory_order_relaxed));
+        sim.move_control_rods(control->control_rod_target.load(std::memory_order_relaxed));
+
+        if(curr_time >= next_report) {
+            next_report += report_interval;
+            const double elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+            spdlog::info(
+                "t={:5.1f}s tick={:5} | P_th={:7.1f} MW | P_el={:7.1f} MW | "
+                "T_fuel={:6.1f} C | T_out={:6.1f} C | T_in={:6.1f} C | "
+                "flow={:8.1f} kg/s | rods={:5.1f}% | rho={:+.5f}",
+                elapsed,
+                tick,
+                s.thermal_power / 1.0e6,
+                s.electrical_power / 1.0e6,
+                s.fuel_temperature,
+                s.coolant_outlet_temp,
+                s.coolant_inlet_temp,
+                s.pump_flow_rate,
+                s.rod_position,
+                s.reactivity);
+        }
     }
 
     sim.stop();
