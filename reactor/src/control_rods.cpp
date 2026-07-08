@@ -5,21 +5,22 @@
 
 namespace reactor {
 
-ControlRods::ControlRods(const ReactivityParams& params)
-    : params_(params) {}
+ControlRods::ControlRods(const ReactivityParams& params) : params_(params) {}
 
-void ControlRods::tick(std::chrono::duration<double> dt, const ReactorState& read, ReactorState& write) {
-    double position = read.rod_position;
-    double target = read.rod_target;
+void
+ControlRods::tick(std::chrono::duration<double> dt, const ReactorState& read, ReactorState& write)
+{
+	double position = read.rod_position;
+	double target = read.rod_target;
 
-    double error = target - position;
-    double max_step = params_.max_rod_speed * dt.count();
-    double step = std::clamp(error, -max_step, max_step);
+	double error = target - position;
+	double max_step = params_.max_rod_speed * dt.count();
+	double step = std::clamp(error, -max_step, max_step);
 
-    position = std::clamp(position + step, 0.0, 100.0);
+	position = std::clamp(position + step, 0.0, 100.0);
 
-    write.rod_position = position;
-    write.rod_target = target;
+	write.rod_position = position;
+	write.rod_target = target;
 }
 
 } // namespace reactor

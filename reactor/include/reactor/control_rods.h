@@ -5,13 +5,14 @@
 
 namespace reactor {
 
-class ControlRods : public Module {
+class ControlRods : public Module
+{
 public:
-    explicit ControlRods(const ReactivityParams& params);
-    void tick(std::chrono::duration<double> dt, const ReactorState& read, ReactorState& write) override;
+	explicit ControlRods(const ReactivityParams& params);
+	void tick(std::chrono::duration<double> dt, const ReactorState& read, ReactorState& write) override;
 
 private:
-    ReactivityParams params_;
+	ReactivityParams params_;
 };
 
 } // namespace reactor

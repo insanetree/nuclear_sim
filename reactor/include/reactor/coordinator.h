@@ -15,56 +15,57 @@
 
 namespace reactor {
 
-class Coordinator {
+class Coordinator
+{
 public:
-    explicit Coordinator(const SimulatorConfig& config);
-    ~Coordinator();
+	explicit Coordinator(const SimulatorConfig& config);
+	~Coordinator();
 
-    Coordinator(const Coordinator&) = delete;
-    Coordinator& operator=(const Coordinator&) = delete;
+	Coordinator(const Coordinator&) = delete;
+	Coordinator& operator=(const Coordinator&) = delete;
 
-    void start();
-    void stop();
+	void start();
+	void stop();
 
-    // Coherent copy of the latest completed state. Uses tick_count_ as a
-    // seqlock so the returned snapshot never spans a buffer swap (all fields
-    // come from the same tick). Safe to call from any thread.
-    ReactorState get_reactor_state() const;
+	// Coherent copy of the latest completed state. Uses tick_count_ as a
+	// seqlock so the returned snapshot never spans a buffer swap (all fields
+	// come from the same tick). Safe to call from any thread.
+	ReactorState get_reactor_state() const;
 
-    // Access to commands (atomics, safe from any thread)
-    Commands& commands();
+	// Access to commands (atomics, safe from any thread)
+	Commands& commands();
 
-    // Tick counter
-    uint64_t tick_count() const;
+	// Tick counter
+	uint64_t tick_count() const;
 
 private:
-    void run_module(Module& module);
-    void on_tick_complete() noexcept;
+	void run_module(Module& module);
+	void on_tick_complete() noexcept;
 
-    SimulatorConfig config_;
+	SimulatorConfig config_;
 
-    // Double-buffered state
-    std::array<ReactorState, 2> state_buffers_;
-    std::atomic<std::size_t> read_index_{0};
+	// Double-buffered state
+	std::array<ReactorState, 2> state_buffers_;
+	std::atomic<std::size_t> read_index_{0};
 
-    // Commands from external interface
-    Commands commands_;
+	// Commands from external interface
+	Commands commands_;
 
-    // Modules
-    ControlRods control_rods_;
-    ReactorCore reactor_core_;
-    CoolantLoop coolant_loop_;
-    Turbine turbine_;
+	// Modules
+	ControlRods control_rods_;
+	ReactorCore reactor_core_;
+	CoolantLoop coolant_loop_;
+	Turbine turbine_;
 
-    // Synchronisation
-    static constexpr int kNumModules = 4;
-    std::barrier<std::function<void()>> barrier_;
+	// Synchronisation
+	static constexpr int kNumModules = 4;
+	std::barrier<std::function<void()>> barrier_;
 
-    // Threads
-    std::array<std::jthread, kNumModules> module_threads_;
-    std::atomic<bool> running_{false};
-    std::atomic<bool> stopping_{false};
-    std::atomic<uint64_t> tick_count_{0};
+	// Threads
+	std::array<std::jthread, kNumModules> module_threads_;
+	std::atomic<bool> running_{false};
+	std::atomic<bool> stopping_{false};
+	std::atomic<uint64_t> tick_count_{0};
 };
 
 } // namespace reactor
