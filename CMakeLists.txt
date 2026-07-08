@@ -65,3 +65,4 @@ add_library(logging INTERFACE)
 target_link_libraries(logging INTERFACE spdlog::spdlog)
 
 add_subdirectory(reactor)
+add_subdirectory(controller)
