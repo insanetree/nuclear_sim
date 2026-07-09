@@ -1,0 +1,6 @@
+namespace controller {
+
+class diagnostics
+{}
+
+}

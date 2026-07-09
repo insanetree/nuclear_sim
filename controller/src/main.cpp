@@ -39,21 +39,23 @@ main()
 {
 	int control_panel_fd = -1;
 	int status_panel_fd = -1;
-	
-	controller::status_panel* status_panel = create_and_map<controller::status_panel>(controller::shm_status_panel_name, status_panel_fd);
-	controller::control_panel* control_panel = create_and_map<controller::control_panel>(controller::shm_control_panel_name, control_panel_fd);
 
-	if(!status_panel || !control_panel) {
+	controller::status_panel* status_panel =
+		create_and_map<controller::status_panel>(controller::shm_status_panel_name, status_panel_fd);
+	controller::control_panel* control_panel =
+		create_and_map<controller::control_panel>(controller::shm_control_panel_name, control_panel_fd);
+
+	if (!status_panel || !control_panel) {
 		spdlog::error("Failed to map shared memory segments");
 		return EXIT_FAILURE;
 	}
 
-	if(std::strncmp(status_panel->magic_value, "STATPNL", 8) != 0) {
+	if (std::strncmp(status_panel->magic_value, "STATPNL", 8) != 0) {
 		spdlog::error("Status panel magic value mismatch");
 		return EXIT_FAILURE;
 	}
 
-	if(std::strncmp(control_panel->magic_value, "CTRLPNL", 8) != 0) {
+	if (std::strncmp(control_panel->magic_value, "CTRLPNL", 8) != 0) {
 		spdlog::error("Control panel magic value mismatch");
 		return EXIT_FAILURE;
 	}

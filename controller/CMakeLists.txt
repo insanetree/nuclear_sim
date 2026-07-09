@@ -1,5 +1,6 @@
 add_library(controller
     src/decision_making.cpp
+    src/diagnostics.cpp
 )
 
 target_include_directories(controller PUBLIC include)
