@@ -72,7 +72,8 @@ main()
 	reactor::status_panel* status =
 		create_and_map<reactor::status_panel>(reactor::shm_status_panel_name, status_panel_fd);
 	if (control == nullptr || status == nullptr) {
-		return 1;
+		spdlog::error("Failed to map shared memory segments");
+		return EXIT_FAILURE;
 	}
 	close(control_panel_fd);
 	close(status_panel_fd);
