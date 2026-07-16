@@ -1,3 +1,5 @@
+#include "controller/decision_making.hpp"
+#include "controller/diagnostics.hpp"
 #include "controller/ipc.hpp"
 
 #include <spdlog/spdlog.h>
@@ -5,6 +7,7 @@
 #include <chrono>
 #include <cstring>
 #include <fcntl.h>
+#include <memory>
 #include <new>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -58,6 +61,21 @@ main()
 	if (std::strncmp(control_panel->magic_value, "CTRLPNL", 8) != 0) {
 		spdlog::error("Control panel magic value mismatch");
 		return EXIT_FAILURE;
+	}
+
+	{
+		// diagnostics and decision_maker must be stopped and joined (on scope
+		// exit) before the shared-memory segments are unmapped below, otherwise
+		// their poller threads can dereference the panels after they've been
+		// unmapped.
+		auto diag = std::make_shared<controller::diagnostics>(status_panel);
+		diag->start();
+
+		controller::decision_maker decision(control_panel, diag);
+		decision.start();
+
+		using namespace std::chrono_literals;
+		std::this_thread::sleep_for(60s);
 	}
 
 	munmap(status_panel, sizeof(controller::status_panel));
