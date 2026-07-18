@@ -1,5 +1,7 @@
 #include "reactor/core.h"
 
+#include "reactor/constants.h"
+
 #include <gtest/gtest.h>
 
 #include <cmath>
@@ -9,10 +11,7 @@ using namespace reactor;
 class ReactorCoreTest : public ::testing::Test
 {
 protected:
-	NeutronicsParams neutronics;
-	FuelParams fuel;
-	ReactivityParams reactivity;
-	ReactorCore core{neutronics, fuel, reactivity};
+	ReactorCore core;
 	ReactorState read;
 	ReactorState write;
 
@@ -22,11 +21,12 @@ protected:
 		read.rod_position = 100.0;
 		read.neutron_population = 1.0;
 		// Steady-state precursor: C = (β/Λ) * n / λ
-		read.precursor_concentration = (neutronics.beta / neutronics.generation_time) / neutronics.lambda;
+		read.precursor_concentration =
+			(constants::neutronics::beta / constants::neutronics::generation_time) / constants::neutronics::lambda;
 		read.fuel_temperature = 614.0;
 		read.coolant_inlet_temp = 290.0;
 		read.coolant_outlet_temp = 338.0;
-		read.thermal_power = neutronics.nominal_power;
+		read.thermal_power = constants::neutronics::nominal_power;
 	}
 };
 
@@ -47,13 +47,13 @@ TEST_F(ReactorCoreTest, PositiveReactivityIncreasesPower)
 {
 	// Cool fuel → positive Doppler feedback (rho_doppler > 0 when T < T_ref)
 	read.rod_position = 100.0;
-	read.fuel_temperature = fuel.ref_temperature - 200.0;
+	read.fuel_temperature = constants::fuel::ref_temperature - 200.0;
 
 	core.tick(std::chrono::duration<double>{0.1}, read, write);
 
 	EXPECT_GT(write.reactivity, 0.0);
 	EXPECT_GT(write.neutron_population, 1.0);
-	EXPECT_GT(write.thermal_power, neutronics.nominal_power);
+	EXPECT_GT(write.thermal_power, constants::neutronics::nominal_power);
 }
 
 TEST_F(ReactorCoreTest, NegativeReactivityDecreasesPower)
@@ -74,7 +74,8 @@ TEST_F(ReactorCoreTest, FuelTemperatureChangesWithPower)
 	// With very high neutron population and fuel near coolant temp (small Q_to_coolant)
 	read.rod_position = 100.0;
 	read.neutron_population = 2.0;
-	read.precursor_concentration = (neutronics.beta / neutronics.generation_time) / neutronics.lambda * 2.0;
+	read.precursor_concentration =
+		(constants::neutronics::beta / constants::neutronics::generation_time) / constants::neutronics::lambda * 2.0;
 	// Set fuel temperature low so Q_to_coolant is small relative to 6 GW
 	read.fuel_temperature = 350.0;
 
@@ -90,7 +91,7 @@ TEST_F(ReactorCoreTest, NeutronPopulationNeverNegative)
 	read.rod_position = 0.0;
 	read.neutron_population = 1e-15;
 	read.precursor_concentration = 0.0;
-	read.fuel_temperature = fuel.ref_temperature + 5000.0;
+	read.fuel_temperature = constants::fuel::ref_temperature + 5000.0;
 
 	core.tick(std::chrono::duration<double>{0.1}, read, write);
 

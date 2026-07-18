@@ -1,5 +1,7 @@
 #include "reactor/coolant_loop.h"
 
+#include "reactor/constants.h"
+
 #include <gtest/gtest.h>
 
 #include <cmath>
@@ -9,20 +11,18 @@ using namespace reactor;
 class CoolantLoopTest : public ::testing::Test
 {
 protected:
-	CoolantParams coolant;
-	FuelParams fuel;
-	CoolantLoop loop{coolant, fuel};
+	CoolantLoop loop;
 	ReactorState read;
 	ReactorState write;
 
 	void SetUp() override
 	{
-		read.fuel_temperature = fuel.ref_temperature;        // ~614 °C
-		read.coolant_inlet_temp = coolant.inlet_temperature; // 290 °C
+		read.fuel_temperature = constants::fuel::ref_temperature;        // ~614 °C
+		read.coolant_inlet_temp = constants::coolant::inlet_temperature; // 290 °C
 		// Steady-state outlet: T_out = T_in + P / (m_dot * c_p)
-		read.coolant_outlet_temp =
-			coolant.inlet_temperature + 3.0e9 / (coolant.nominal_flow_rate * coolant.specific_heat);
-		read.pump_flow_rate = coolant.nominal_flow_rate;
+		read.coolant_outlet_temp = constants::coolant::inlet_temperature +
+		                           3.0e9 / (constants::coolant::nominal_flow_rate * constants::coolant::specific_heat);
+		read.pump_flow_rate = constants::coolant::nominal_flow_rate;
 		read.thermal_power = 3.0e9;
 	}
 };
@@ -38,7 +38,7 @@ TEST_F(CoolantLoopTest, SteadyStateIsStable)
 TEST_F(CoolantLoopTest, ReducedFlowIncreasesOutletTemp)
 {
 	// Halving flow rate should cause outlet temp to rise
-	read.pump_flow_rate = coolant.nominal_flow_rate / 2.0;
+	read.pump_flow_rate = constants::coolant::nominal_flow_rate / 2.0;
 
 	loop.tick(std::chrono::duration<double>{0.1}, read, write);
 
@@ -49,7 +49,7 @@ TEST_F(CoolantLoopTest, ReducedFlowIncreasesOutletTemp)
 TEST_F(CoolantLoopTest, IncreasedFlowDecreasesOutletTemp)
 {
 	// Doubling flow rate should cause outlet temp to fall
-	read.pump_flow_rate = coolant.nominal_flow_rate * 2.0;
+	read.pump_flow_rate = constants::coolant::nominal_flow_rate * 2.0;
 
 	loop.tick(std::chrono::duration<double>{0.1}, read, write);
 
@@ -66,11 +66,15 @@ TEST_F(CoolantLoopTest, HotterFuelIncreasesOutletTemp)
 	EXPECT_GT(write.coolant_outlet_temp, read.coolant_outlet_temp);
 }
 
-TEST_F(CoolantLoopTest, InletTempIsConstant)
+TEST_F(CoolantLoopTest, DoesNotWriteInletTemp)
 {
+	// coolant_inlet_temp is owned by the Turbine module (secondary loop);
+	// CoolantLoop must not touch it.
+	write.coolant_inlet_temp = -1.0;
+
 	loop.tick(std::chrono::duration<double>{0.1}, read, write);
 
-	EXPECT_DOUBLE_EQ(write.coolant_inlet_temp, coolant.inlet_temperature);
+	EXPECT_DOUBLE_EQ(write.coolant_inlet_temp, -1.0);
 }
 
 TEST_F(CoolantLoopTest, FlowRateIsPreserved)

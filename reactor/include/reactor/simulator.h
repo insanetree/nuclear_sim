@@ -21,7 +21,7 @@ public:
 
 	// Commands (thread-safe, applied on next tick)
 	void move_control_rods(double target_percent);
-	void set_pump_flow_rate(double kg_per_sec);
+	void set_steam_generator_effectiveness(double percent);
 
 	// Queries (thread-safe, reads latest completed state)
 	ReactorState get_reactor_state() const;

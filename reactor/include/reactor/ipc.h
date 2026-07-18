@@ -9,7 +9,7 @@ struct control_panel
 {
 	const char magic_value[8] = "CTRLPNL";
 	std::atomic<double> control_rod_target;
-	std::atomic<double> pump_flow_target;
+	std::atomic<double> steam_generator_effectiveness_target;
 };
 
 struct status_panel
@@ -21,6 +21,7 @@ struct status_panel
 	std::atomic<double> electrical_power;
 	std::atomic<double> coolant_inlet_temperature;
 	std::atomic<double> coolant_outlet_temperature;
+	std::atomic<double> steam_generator_effectiveness;
 	std::atomic_uint64_t tick_1;
 	std::atomic_uint64_t tick_2;
 };

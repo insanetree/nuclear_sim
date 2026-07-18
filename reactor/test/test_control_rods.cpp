@@ -7,8 +7,7 @@ using namespace reactor;
 class ControlRodsTest : public ::testing::Test
 {
 protected:
-	ReactivityParams params;
-	ControlRods rods{params};
+	ControlRods rods;
 	ReactorState read;
 	ReactorState write;
 };

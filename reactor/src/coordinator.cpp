@@ -9,12 +9,10 @@ namespace reactor {
 
 Coordinator::Coordinator(const SimulatorConfig& config) :
 	config_(config),
-	control_rods_(config.reactivity),
-	reactor_core_(config.neutronics, config.fuel, config.reactivity),
-	coolant_loop_(config.coolant, config.fuel),
-	turbine_(config.turbine),
 	barrier_(kNumModules, [this]() noexcept { on_tick_complete(); })
 {
+	commands_.steam_generator_effectiveness_target.store(constants::turbine::steam_generator_effectiveness,
+	                                                     std::memory_order_relaxed);
 
 	// Initialise steady-state in both buffers
 	auto init_state = [&](ReactorState& s) {
@@ -23,22 +21,23 @@ Coordinator::Coordinator(const SimulatorConfig& config) :
 		s.neutron_population = 1.0;
 		// Steady-state precursor concentration: C = (β / Λ) * n / λ
 		s.precursor_concentration =
-			(config.neutronics.beta / config.neutronics.generation_time) / config.neutronics.lambda;
+			(constants::neutronics::beta / constants::neutronics::generation_time) / constants::neutronics::lambda;
 		s.reactivity = 0.0;
-		s.thermal_power = config.neutronics.nominal_power;
-		s.fuel_temperature = config.fuel.ref_temperature;
-		s.coolant_inlet_temp = config.coolant.inlet_temperature;
+		s.thermal_power = constants::neutronics::nominal_power;
+		s.fuel_temperature = constants::fuel::ref_temperature;
+		s.coolant_inlet_temp = constants::coolant::inlet_temperature;
 		// Steady-state outlet: T_out = T_in + P / (m_dot * c_p)
-		s.coolant_outlet_temp =
-			config.coolant.inlet_temperature +
-			config.neutronics.nominal_power / (config.coolant.nominal_flow_rate * config.coolant.specific_heat);
-		s.pump_flow_rate = config.coolant.nominal_flow_rate;
-		s.heat_removal_rate = config.neutronics.nominal_power;
+		s.coolant_outlet_temp = constants::coolant::inlet_temperature +
+		                        constants::neutronics::nominal_power /
+		                            (constants::coolant::nominal_flow_rate * constants::coolant::specific_heat);
+		s.pump_flow_rate = constants::coolant::nominal_flow_rate;
+		s.heat_removal_rate = constants::neutronics::nominal_power;
 		// Carnot-fraction efficiency at the nominal outlet temperature
 		double nominal_efficiency =
-			config.turbine.carnot_fraction *
-			(1.0 - (config.turbine.condenser_temperature + 273.15) / (s.coolant_outlet_temp + 273.15));
-		s.electrical_power = nominal_efficiency * config.neutronics.nominal_power;
+			constants::turbine::carnot_fraction *
+			(1.0 - (constants::turbine::condenser_temperature + 273.15) / (s.coolant_outlet_temp + 273.15));
+		s.electrical_power = nominal_efficiency * constants::neutronics::nominal_power;
+		s.steam_generator_effectiveness = constants::turbine::steam_generator_effectiveness;
 	};
 
 	init_state(state_buffers_[0]);
@@ -46,7 +45,7 @@ Coordinator::Coordinator(const SimulatorConfig& config) :
 
 	spdlog::info("Coordinator initialised — tick period: {:.3f}s, nominal power: {:.0f} MW",
 	             config_.tick_period.count(),
-	             config_.neutronics.nominal_power / 1.0e6);
+	             constants::neutronics::nominal_power / 1.0e6);
 }
 
 Coordinator::~Coordinator()
@@ -148,8 +147,8 @@ Coordinator::on_tick_complete() noexcept
 	// Apply external commands to the newly written state
 	std::size_t write_index = 1 - read_index_.load(std::memory_order_relaxed);
 	state_buffers_[write_index].rod_target = commands_.rod_target.load(std::memory_order_relaxed);
-	state_buffers_[write_index].pump_flow_rate =
-		std::clamp(commands_.pump_flow_rate.load(std::memory_order_relaxed), 1.0, config_.coolant.max_flow_rate);
+	state_buffers_[write_index].steam_generator_effectiveness =
+		std::clamp(commands_.steam_generator_effectiveness_target.load(std::memory_order_relaxed), 0.0, 100.0);
 
 	// Swap buffers
 	read_index_.store(write_index, std::memory_order_release);

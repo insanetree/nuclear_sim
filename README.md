@@ -9,12 +9,13 @@ The simulator is composed of independent modules, each running on its own thread
 ```
 ┌─────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
 │ ControlRods │───▶│  ReactorCore │───▶│  CoolantLoop │───▶│   Turbine    │
-│  (module)   │ ρ   │   (module)   │  Q  │   (module)   │  Q  │   (module)   │
-└─────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
-       ▲                                         │                    │
-       │            ┌──────────────┐             │                    │
-       └────────────│  Coordinator │◀───────────┴────────────────────┘
-         commands   │  (barrier)   │  T_coolant, P_electric
+│  (module)   │ ρ   │   (module)   │  Q  │   (module)   │ T_out│  (module)   │
+└─────────────┘     └──────────────┘     └──────▲───────┘     └──────┬───────┘
+       ▲                                         │  T_in (next tick)  │
+       │            ┌──────────────┐             └─────────────────────┘
+       │            │              │
+       └────────────│  Coordinator │
+         commands   │  (barrier)   │
                     └──────────────┘
 ```
 
@@ -22,8 +23,8 @@ The simulator is composed of independent modules, each running on its own thread
 
 1. **ControlRods** receives a target position command and outputs the current rod position (which determines reactivity).
 2. **ReactorCore** takes rod reactivity and coolant temperature, solves neutron kinetics and fuel thermal equations, and outputs thermal power and fuel temperature.
-3. **CoolantLoop** takes thermal power and pump flow rate, computes heat removal and coolant temperatures.
-4. **Turbine** takes the heat removed by the coolant and converts it to gross electrical power output.
+3. **CoolantLoop** takes thermal power and the (fixed) pump flow rate, computes heat delivered to the coolant and the new outlet temperature, using the coolant inlet temperature set by **Turbine** on the previous tick.
+4. **Turbine** (secondary loop / steam generator) extracts heat from the hot-leg (outlet) coolant to generate steam/electrical power, and cools the coolant down before it returns to the core as next tick's inlet temperature — closing the primary/secondary loop.
 5. **Coordinator** manages the tick clock and `std::barrier`, swapping double-buffered state each tick.
 
 ### Double Buffering
@@ -32,7 +33,7 @@ Inter-module data is stored in a `ReactorState` struct with two buffers. During 
 
 ### Tick Rate
 
-Default: **10 Hz** (100 ms period). Configurable via `SimulatorConfig`.
+Default: **10 Hz** (100 ms period). Configurable via `SimulatorConfig::tick_period`. All other physics parameters below are fixed `constexpr` values in `reactor::constants` (see `constants.h`), not runtime-configurable — the only runtime-configurable simulation input is `steam_generator_effectiveness` (via `Simulator::set_steam_generator_effectiveness`), which lives in `ReactorState`/`Commands`.
 
 ---
 
@@ -84,7 +85,7 @@ $$\rho_{\text{total}} = \rho_{\text{rod}} + \alpha_{\text{fuel}} \cdot (T_{\text
 
 | Parameter | Symbol | Default Value | Unit |
 |-----------|--------|---------------|------|
-| Fuel temperature coefficient (Doppler) | $\alpha_{\text{fuel}}$ | −2.5 × 10⁻⁵ | Δk/k/°C |
+| Fuel temperature coefficient (Doppler) | $\alpha_{\text{fuel}}$ | −1.7284 × 10⁻⁴ | Δk/k/°C |
 | Reference fuel temperature | $T_{\text{fuel,ref}}$ | 614 | °C |
 
 **Thermal power** from the neutron population:
@@ -115,7 +116,7 @@ $$\tau_f = \frac{M_f \cdot c_f}{h_{\text{gap}} \cdot A_{\text{gap}}} = \frac{100
 
 ### 4. Coolant Loop
 
-The coolant (water) in the reactor core is modeled as a lumped volume with thermal inertia:
+The coolant (water) in the reactor core is modeled as a lumped volume with thermal inertia. The pump flow rate is fixed (not commandable). The inlet (cold-leg) temperature $T_{\text{in}}$ is **not** a fixed constant — it is set dynamically every tick by the Turbine's secondary loop, based on the outlet temperature and heat extraction from the *previous* tick (one-tick double-buffer lag), closing the primary/secondary loop:
 
 $$M_c \cdot c_p \cdot \frac{dT_{\text{out}}}{dt} = Q_{\text{core}} - Q_{\text{removed}}$$
 
@@ -131,25 +132,35 @@ $$Q_{\text{removed}} = \dot{m} \cdot c_p \cdot (T_{\text{out}} - T_{\text{in}})$
 |-----------|--------|---------------|------|
 | Coolant mass in core | $M_c$ | 20,000 | kg |
 | Coolant specific heat | $c_p$ | 4,180 | J/(kg·K) |
-| Inlet temperature (cold leg) | $T_{\text{in}}$ | 290 | °C |
-| Nominal pump flow rate | $\dot{m}$ | 15,000 | kg/s |
+| Initial inlet temperature (cold leg) | $T_{\text{in}}$ | 290 | °C |
+| Pump flow rate (fixed) | $\dot{m}$ | 15,000 | kg/s |
 
 The coolant thermal time constant is:
 
 $$\tau_c = \frac{M_c \cdot c_p}{\dot{m} \cdot c_p} = \frac{M_c}{\dot{m}} = \frac{20000}{15000} \approx 1.3 \text{ s}$$
 
-### 5. Turbine (Power Conversion)
+### 5. Turbine (Secondary Loop / Power Conversion)
 
-The secondary side converts the heat carried away by the primary coolant into gross electrical power. The conversion efficiency is a fixed fraction of the ideal Carnot limit set by the hot-leg (coolant outlet) and condenser temperatures, so hotter coolant converts more efficiently:
+The Turbine module models the secondary loop (steam generator): it extracts heat from the hot-leg (outlet) primary coolant to generate steam/electrical power, and cools the coolant down before it returns to the core as the *next* tick's inlet temperature. The amount extracted is bounded by the maximum possible — cooling the coolant down to the **secondary-side saturation temperature** (the pinch-point limit of the heat exchanger: the primary side can never be cooled below the boiling point of the secondary water, since heat only flows from hotter to colder fluid) — scaled by a configurable effectiveness:
 
-$$P_{\text{electric}} = \eta(T_{\text{out}}) \cdot Q_{\text{removed}}, \qquad \eta(T_{\text{out}}) = \eta_{\text{rel}} \left(1 - \frac{T_{\text{cold}}}{T_{\text{hot}}}\right)$$
+$$Q_{\text{max}} = \max\left(\dot{m} \cdot c_p \cdot (T_{\text{out}} - T_{\text{sat}}),\ 0\right), \qquad Q_{\text{extracted}} = \frac{\varepsilon_{\text{sg}}}{100} \cdot Q_{\text{max}}$$
 
-where $T_{\text{hot}} = T_{\text{out}} + 273.15$ K, $T_{\text{cold}} = T_{\text{condenser}} + 273.15$ K, and $Q_{\text{removed}} = \dot{m} \cdot c_p \cdot (T_{\text{out}} - T_{\text{in}})$ is the heat removed by the coolant loop. At nominal conditions ($T_{\text{out}} \approx 338\,°$C) this yields $\eta \approx 0.33$. Because the conversion has no state of its own, electrical output tracks coolant flow and temperature directly (with the usual one-tick double-buffer lag).
+$$T_{\text{in}}^{\text{next}} = T_{\text{out}} - \frac{Q_{\text{extracted}}}{\dot{m} \cdot c_p}$$
+
+Electrical output is a fixed fraction of the ideal Carnot limit, applied to the extracted heat. The cold sink for this Carnot limit is the **condenser** temperature — a separate, downstream heat exchanger where the low-pressure turbine exhaust steam condenses, unrelated to the steam-generator pinch point above — so hotter coolant converts more efficiently:
+
+$$P_{\text{electric}} = \eta(T_{\text{out}}) \cdot Q_{\text{extracted}}, \qquad \eta(T_{\text{out}}) = \eta_{\text{rel}} \left(1 - \frac{T_{\text{cold}}}{T_{\text{hot}}}\right)$$
+
+where $T_{\text{hot}} = T_{\text{out}} + 273.15$ K and $T_{\text{cold}} = T_{\text{condenser}} + 273.15$ K. At nominal conditions ($T_{\text{out}} \approx 338\,°$C) this yields $\eta \approx 0.33$. Because both electrical output and the returned inlet temperature depend only on the current outlet temperature and flow (no state of their own), they track coolant conditions directly (with the usual one-tick double-buffer lag).
 
 | Parameter | Symbol | Default Value | Unit |
 |-----------|--------|---------------|------|
 | Carnot fraction (relative efficiency) | $\eta_{\text{rel}}$ | 0.655 | — |
 | Condenser temperature | $T_{\text{condenser}}$ | 30 | °C |
+| Secondary saturation (pinch-point) temperature | $T_{\text{sat}}$ | 270 | °C |
+| Steam generator effectiveness (initial value; commandable at runtime) | $\varepsilon_{\text{sg}}$ | 70.52 | % |
+
+The default effectiveness is tuned so nominal full-power operation (rods fully withdrawn) reproduces the classic ~290 °C / ~338 °C inlet/outlet steady state. Because the pinch-point limit (270 °C) is much closer to the nominal outlet temperature than the condenser temperature, the coolant *can* physically be over-cooled toward 270 °C during transients (e.g. a power reduction where heat extraction briefly outpaces core heat generation) — useful as a realistic bound for detecting an overly cold primary loop.
 
 ### Nominal Steady-State Operating Point
 
@@ -202,16 +213,11 @@ public:
 
     // Commands (thread-safe, applied on next tick)
     void move_control_rods(double target_percent);
-    void set_pump_flow_rate(double kg_per_sec);
+    void set_steam_generator_effectiveness(double percent); // clamped to [0, 100]
 
     // Queries (thread-safe, reads latest completed state)
-    double get_thermal_power() const;
-    double get_electrical_power() const;
-    double get_fuel_temperature() const;
-    double get_coolant_outlet_temperature() const;
-    double get_coolant_inlet_temperature() const;
-    double get_pump_flow_rate() const;
-    double get_control_rod_position() const;
+    ReactorState get_reactor_state() const;
+    uint64_t get_tick_count() const;
 };
 ```
 

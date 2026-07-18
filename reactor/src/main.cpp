@@ -82,7 +82,7 @@ main()
 
 	reactor::ReactorState reactor_state = sim.get_reactor_state();
 	control->control_rod_target.store(reactor_state.rod_target);
-	control->pump_flow_target.store(reactor_state.pump_flow_rate);
+	control->steam_generator_effectiveness_target.store(reactor_state.steam_generator_effectiveness);
 	sim.start();
 
 	const auto run_duration = 60s;
@@ -109,10 +109,12 @@ main()
 		status->electrical_power.store(s.electrical_power, std::memory_order_relaxed);
 		status->coolant_inlet_temperature.store(s.coolant_inlet_temp, std::memory_order_relaxed);
 		status->coolant_outlet_temperature.store(s.coolant_outlet_temp, std::memory_order_relaxed);
+		status->steam_generator_effectiveness.store(s.steam_generator_effectiveness, std::memory_order_relaxed);
 		status->tick_2.store(tick);
 
-		sim.set_pump_flow_rate(control->pump_flow_target.load(std::memory_order_relaxed));
 		sim.move_control_rods(control->control_rod_target.load(std::memory_order_relaxed));
+		sim.set_steam_generator_effectiveness(
+			control->steam_generator_effectiveness_target.load(std::memory_order_relaxed));
 
 		if (curr_time >= next_report) {
 			next_report += report_interval;

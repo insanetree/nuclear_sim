@@ -1,15 +1,8 @@
 #include "reactor/core.h"
 
-namespace reactor {
+#include "reactor/constants.h"
 
-ReactorCore::ReactorCore(const NeutronicsParams& neutronics,
-                         const FuelParams& fuel,
-                         const ReactivityParams& reactivity) :
-	neutronics_(neutronics),
-	fuel_(fuel),
-	reactivity_(reactivity)
-{
-}
+namespace reactor {
 
 void
 ReactorCore::tick(std::chrono::duration<double> dt, const ReactorState& read, ReactorState& write)
@@ -20,13 +13,15 @@ ReactorCore::tick(std::chrono::duration<double> dt, const ReactorState& read, Re
 	double T_coolant = (read.coolant_inlet_temp + read.coolant_outlet_temp) / 2.0;
 
 	// Reactivity: rod contribution + Doppler feedback
-	double rho_rod = -reactivity_.rod_worth * (1.0 - read.rod_position / 100.0);
-	double rho_doppler = reactivity_.doppler_coefficient * (T_fuel - fuel_.ref_temperature);
+	double rho_rod = -constants::reactivity::rod_worth * (1.0 - read.rod_position / 100.0);
+	double rho_doppler = constants::reactivity::doppler_coefficient * (T_fuel - constants::fuel::ref_temperature);
 	double rho = rho_rod + rho_doppler;
 
 	// Point kinetics (forward Euler)
-	double dn_dt = ((rho - neutronics_.beta) / neutronics_.generation_time) * n + neutronics_.lambda * C;
-	double dC_dt = (neutronics_.beta / neutronics_.generation_time) * n - neutronics_.lambda * C;
+	double dn_dt = ((rho - constants::neutronics::beta) / constants::neutronics::generation_time) * n +
+	               constants::neutronics::lambda * C;
+	double dC_dt =
+		(constants::neutronics::beta / constants::neutronics::generation_time) * n - constants::neutronics::lambda * C;
 
 	n += dn_dt * dt.count();
 	C += dC_dt * dt.count();
@@ -37,11 +32,11 @@ ReactorCore::tick(std::chrono::duration<double> dt, const ReactorState& read, Re
 	}
 
 	// Thermal power
-	double P_fission = n * neutronics_.nominal_power;
+	double P_fission = n * constants::neutronics::nominal_power;
 
 	// Fuel temperature (forward Euler)
-	double Q_to_coolant = fuel_.gap_conductance * (T_fuel - T_coolant);
-	double dT_fuel_dt = (P_fission - Q_to_coolant) / (fuel_.mass * fuel_.specific_heat);
+	double Q_to_coolant = constants::fuel::gap_conductance * (T_fuel - T_coolant);
+	double dT_fuel_dt = (P_fission - Q_to_coolant) / (constants::fuel::mass * constants::fuel::specific_heat);
 	T_fuel += dT_fuel_dt * dt.count();
 
 	write.neutron_population = n;

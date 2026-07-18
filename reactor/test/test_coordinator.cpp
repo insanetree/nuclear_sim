@@ -1,5 +1,7 @@
 #include "reactor/simulator.h"
 
+#include "reactor/constants.h"
+
 #include <gtest/gtest.h>
 
 #include <chrono>
@@ -25,11 +27,12 @@ TEST(SimulatorTest, InitialStateIsNominal)
 
 	// Before starting, state should be at nominal
 	const ReactorState s = sim.get_reactor_state();
-	EXPECT_NEAR(s.thermal_power, config.neutronics.nominal_power, 1e6);
-	EXPECT_NEAR(s.fuel_temperature, config.fuel.ref_temperature, 1.0);
-	EXPECT_NEAR(s.coolant_inlet_temp, config.coolant.inlet_temperature, 0.1);
-	EXPECT_NEAR(s.pump_flow_rate, config.coolant.nominal_flow_rate, 1.0);
+	EXPECT_NEAR(s.thermal_power, constants::neutronics::nominal_power, 1e6);
+	EXPECT_NEAR(s.fuel_temperature, constants::fuel::ref_temperature, 1.0);
+	EXPECT_NEAR(s.coolant_inlet_temp, constants::coolant::inlet_temperature, 0.1);
+	EXPECT_NEAR(s.pump_flow_rate, constants::coolant::nominal_flow_rate, 1.0);
 	EXPECT_NEAR(s.rod_position, 100.0, 0.1);
+	EXPECT_NEAR(s.steam_generator_effectiveness, constants::turbine::steam_generator_effectiveness, 1e-6);
 }
 
 TEST(SimulatorTest, ControlRodCommandIsApplied)
@@ -47,17 +50,30 @@ TEST(SimulatorTest, ControlRodCommandIsApplied)
 	EXPECT_LT(sim.get_reactor_state().rod_position, 100.0);
 }
 
-TEST(SimulatorTest, PumpFlowRateCommandIsApplied)
+TEST(SimulatorTest, SteamGeneratorEffectivenessCommandIsApplied)
 {
 	Simulator sim;
 	sim.start();
 
-	sim.set_pump_flow_rate(10'000.0);
+	sim.set_steam_generator_effectiveness(40.0);
 	std::this_thread::sleep_for(std::chrono::milliseconds(300));
 
 	sim.stop();
 
-	EXPECT_NEAR(sim.get_reactor_state().pump_flow_rate, 10'000.0, 1.0);
+	EXPECT_NEAR(sim.get_reactor_state().steam_generator_effectiveness, 40.0, 1e-6);
+}
+
+TEST(SimulatorTest, SteamGeneratorEffectivenessCommandIsClamped)
+{
+	Simulator sim;
+	sim.start();
+
+	sim.set_steam_generator_effectiveness(150.0);
+	std::this_thread::sleep_for(std::chrono::milliseconds(300));
+
+	sim.stop();
+
+	EXPECT_NEAR(sim.get_reactor_state().steam_generator_effectiveness, 100.0, 1e-6);
 }
 
 TEST(SimulatorTest, StableAtNominalConditions)
@@ -73,7 +89,7 @@ TEST(SimulatorTest, StableAtNominalConditions)
 
 	// Power should remain near nominal (within 10%)
 	const ReactorState s = sim.get_reactor_state();
-	EXPECT_NEAR(s.thermal_power, config.neutronics.nominal_power, config.neutronics.nominal_power * 0.1);
+	EXPECT_NEAR(s.thermal_power, constants::neutronics::nominal_power, constants::neutronics::nominal_power * 0.1);
 	// Temperatures should be reasonable
 	EXPECT_GT(s.fuel_temperature, 200.0);
 	EXPECT_LT(s.fuel_temperature, 2000.0);

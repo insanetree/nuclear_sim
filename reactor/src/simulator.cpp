@@ -30,9 +30,9 @@ Simulator::move_control_rods(double target_percent)
 }
 
 void
-Simulator::set_pump_flow_rate(double kg_per_sec)
+Simulator::set_steam_generator_effectiveness(double percent)
 {
-	coordinator_->commands().pump_flow_rate.store(kg_per_sec, std::memory_order_relaxed);
+	coordinator_->commands().steam_generator_effectiveness_target.store(percent, std::memory_order_relaxed);
 }
 
 ReactorState
