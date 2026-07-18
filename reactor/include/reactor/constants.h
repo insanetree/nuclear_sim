@@ -22,9 +22,12 @@ struct FuelParams
 
 struct ReactivityParams
 {
-	double rod_worth = 0.08;              // Total control rod worth [Δk/k]
-	double max_rod_speed = 2.0;           // Max rod speed [%/s]
-	double doppler_coefficient = -2.5e-5; // Fuel temperature coefficient [Δk/k/°C]
+	double rod_worth = 0.08;                 // Total control rod worth [Δk/k]
+	double max_rod_speed = 2.0;              // Max rod speed [%/s]
+	double doppler_coefficient = -1.7284e-4; // Fuel temperature coefficient [Δk/k/°C]; sized so max
+	                                         // Doppler feedback (as T_fuel -> coolant inlet temp at
+	                                         // near-zero power) exactly offsets rod reactivity at
+	                                         // rod_position = 30%, making the reactor subcritical below it.
 };
 
 struct CoolantParams
