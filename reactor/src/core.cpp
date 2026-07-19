@@ -12,10 +12,12 @@ ReactorCore::tick(std::chrono::duration<double> dt, const ReactorState& read, Re
 	double T_fuel = read.fuel_temperature;
 	double T_coolant = (read.coolant_inlet_temp + read.coolant_outlet_temp) / 2.0;
 
-	// Reactivity: rod contribution + Doppler feedback
+	// Reactivity: rod contribution + Doppler (fuel temp) + moderator (coolant temp) feedback
 	double rho_rod = -constants::reactivity::rod_worth * (1.0 - read.rod_position / 100.0);
 	double rho_doppler = constants::reactivity::doppler_coefficient * (T_fuel - constants::fuel::ref_temperature);
-	double rho = rho_rod + rho_doppler;
+	double rho_moderator =
+		constants::reactivity::moderator_coefficient * (T_coolant - constants::reactivity::moderator_ref_temperature);
+	double rho = rho_rod + rho_doppler + rho_moderator;
 
 	// Point kinetics (forward Euler)
 	double dn_dt = ((rho - constants::neutronics::beta) / constants::neutronics::generation_time) * n +

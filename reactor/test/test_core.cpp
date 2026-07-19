@@ -86,6 +86,34 @@ TEST_F(ReactorCoreTest, FuelTemperatureChangesWithPower)
 	EXPECT_GT(write.fuel_temperature, 350.0);
 }
 
+TEST_F(ReactorCoreTest, HotCoolantDecreasesReactivity)
+{
+	// Rods fully withdrawn, fuel at ref temp → rho_rod = rho_doppler = 0.
+	// Coolant hotter than moderator_ref_temperature → negative moderator feedback.
+	read.rod_position = 100.0;
+	read.coolant_inlet_temp = 314.0;
+	read.coolant_outlet_temp = 414.0; // avg = 364, 50°C above moderator_ref_temperature
+
+	core.tick(std::chrono::duration<double>{0.1}, read, write);
+
+	EXPECT_LT(write.reactivity, 0.0);
+	EXPECT_LT(write.neutron_population, 1.0);
+}
+
+TEST_F(ReactorCoreTest, ColdCoolantIncreasesReactivity)
+{
+	// Rods fully withdrawn, fuel at ref temp → rho_rod = rho_doppler = 0.
+	// Coolant colder than moderator_ref_temperature → positive moderator feedback.
+	read.rod_position = 100.0;
+	read.coolant_inlet_temp = 214.0;
+	read.coolant_outlet_temp = 314.0; // avg = 264, 50°C below moderator_ref_temperature
+
+	core.tick(std::chrono::duration<double>{0.1}, read, write);
+
+	EXPECT_GT(write.reactivity, 0.0);
+	EXPECT_GT(write.neutron_population, 1.0);
+}
+
 TEST_F(ReactorCoreTest, NeutronPopulationNeverNegative)
 {
 	read.rod_position = 0.0;
