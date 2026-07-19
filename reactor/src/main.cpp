@@ -85,7 +85,7 @@ main()
 	control->steam_generator_effectiveness_target.store(reactor_state.steam_generator_effectiveness);
 	sim.start();
 
-	const auto run_duration = 60s;
+	const auto run_duration = 1h;
 	const auto update_interval = 10ms;
 	const auto report_interval = 500ms;
 

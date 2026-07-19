@@ -15,7 +15,10 @@ class decision_maker
 public:
 	decision_maker(control_panel* control_panel, std::shared_ptr<const diagnostics> diagnostics);
 
-	void set_target_power(double power);
+	// Sets the desired control rod position, clamped to [0, 100]. The
+	// background loop forwards this value to the shared-memory control
+	// panel every update cycle.
+	void set_control_rods(double rod_position);
 
 	void start();
 
