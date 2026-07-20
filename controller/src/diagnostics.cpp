@@ -28,8 +28,23 @@ diagnostics::start()
 const std::pair<diagnostics::diagnostic_panel, diagnostics::state_e>
 diagnostics::get_diagnostics() const
 {
-	const size_t idx = m_read_index.load(std::memory_order_acquire);
-	return {m_diagnostics_buffer[idx], m_state.load(std::memory_order_acquire)};
+	// Seqlock keyed on m_version: if a write (buffer update + index swap)
+	// completes while we're copying the buffer, m_version will have changed
+	// and we retry. This prevents reading a buffer that the writer thread
+	// has started overwriting (the double-buffer wraps back to the same
+	// slot every 2 publishes, so a stalled reader could otherwise observe a
+	// torn read).
+	diagnostic_panel out;
+	state_e state;
+	uint64_t v1;
+	uint64_t v2;
+	do {
+		v1 = m_version.load(std::memory_order_acquire);
+		out = m_diagnostics_buffer[m_read_index.load(std::memory_order_acquire)];
+		state = m_state.load(std::memory_order_acquire);
+		v2 = m_version.load(std::memory_order_acquire);
+	} while (v1 != v2);
+	return {out, state};
 }
 
 void
@@ -125,6 +140,7 @@ diagnostics::run(std::stop_token stoken)
 		const size_t write_index = 1 - m_read_index.load(std::memory_order_relaxed);
 		m_diagnostics_buffer[write_index] = next;
 		m_read_index.store(write_index, std::memory_order_release);
+		m_version.fetch_add(1, std::memory_order_release);
 	}
 }
 

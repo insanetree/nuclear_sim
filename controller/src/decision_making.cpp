@@ -58,7 +58,7 @@ decision_maker::run(std::stop_token stoken)
 			continue;
 		}
 
-		if(status.first.timestamp <= m_last_status.timestamp) {
+		if (status.first.timestamp <= m_last_status.timestamp) {
 			continue;
 		}
 
@@ -80,16 +80,16 @@ decision_maker::get_steam_generation()
 	double T_diff;
 	double T_new;
 
-	if(T_avg == thresholds::T_AVG) {
+	if (T_avg == thresholds::T_AVG) {
 		return m_last_status.steam_generator_effectiveness;
 	}
 
 	T_diff = T_avg - thresholds::T_AVG;
-	
+
 	if (T_diff < -1.0) {
 		T_new = m_last_status.steam_generator_effectiveness - 1.0;
 	} else if (T_diff > 1.0) {
-		T_new =  m_last_status.steam_generator_effectiveness + 1.0;
+		T_new = m_last_status.steam_generator_effectiveness + 1.0;
 	} else {
 		T_new = m_last_status.steam_generator_effectiveness + T_diff;
 	}

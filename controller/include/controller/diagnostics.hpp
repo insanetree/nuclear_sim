@@ -5,6 +5,7 @@
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <thread>
 #include <utility>
 
@@ -55,6 +56,7 @@ private:
 	std::chrono::steady_clock::time_point m_last_update;
 	std::array<diagnostic_panel, 2> m_diagnostics_buffer;
 	std::atomic<size_t> m_read_index{0};
+	std::atomic<uint64_t> m_version{0};
 	std::atomic<bool> m_run = false;
 	std::atomic<state_e> m_state{state_e::ERROR};
 };
