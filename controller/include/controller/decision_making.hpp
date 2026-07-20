@@ -1,5 +1,6 @@
 #pragma once
 
+#include "controller/diagnostics.hpp"
 #include "controller/ipc.hpp"
 #include "controller/thresholds.hpp"
 
@@ -7,8 +8,6 @@
 #include <thread>
 
 namespace controller {
-
-class diagnostics;
 
 class decision_maker
 {
@@ -25,14 +24,16 @@ public:
 private:
 	void run(std::stop_token);
 
+	double get_steam_generation();
+
 	static constexpr std::chrono::duration<double> m_update_interval = std::chrono::duration<double>(0.1);
 
 	std::jthread thread;
 	std::atomic<bool> m_run;
-	std::chrono::steady_clock::time_point m_last_update;
 
 	control_panel* m_control_panel;
 	std::shared_ptr<const diagnostics> m_diagnostics;
+	diagnostics::diagnostic_panel m_last_status;
 	std::atomic<double> m_target_power;
 };
 

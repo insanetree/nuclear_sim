@@ -1,4 +1,5 @@
 #include "controller/diagnostics.hpp"
+#include <atomic>
 
 namespace controller {
 
@@ -52,6 +53,7 @@ diagnostics::run(std::stop_token stoken)
 		double electrical_power = 0.0;
 		double inlet_temp = 0.0;
 		double outlet_temp = 0.0;
+		double steam_generator_effectiveness = 0.0;
 		bool ok = false;
 		uint64_t tick = 0;
 
@@ -65,6 +67,7 @@ diagnostics::run(std::stop_token stoken)
 			electrical_power = m_statpnl->electrical_power.load(std::memory_order_relaxed);
 			inlet_temp = m_statpnl->coolant_inlet_temperature.load(std::memory_order_relaxed);
 			outlet_temp = m_statpnl->coolant_outlet_temperature.load(std::memory_order_relaxed);
+			steam_generator_effectiveness = m_statpnl->steam_generator_effectiveness.load(std::memory_order_relaxed);
 			const uint64_t tick2 = m_statpnl->tick_2.load(std::memory_order_acquire);
 			ok = (tick1 == tick2);
 			tick = tick1;
@@ -102,6 +105,7 @@ diagnostics::run(std::stop_token stoken)
 			next.electrical_power = electrical_power;
 			next.coolant_inlet_temperature = inlet_temp;
 			next.coolant_outlet_temperature = outlet_temp;
+			next.steam_generator_effectiveness = steam_generator_effectiveness;
 			next.fuel_temperature = fuel_temp;
 
 			if (dt > 0.0) {

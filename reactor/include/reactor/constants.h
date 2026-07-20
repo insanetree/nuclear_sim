@@ -23,23 +23,23 @@ inline constexpr double ref_temperature = 614.0; // Reference fuel temperature [
 } // namespace fuel
 
 namespace reactivity {
-inline constexpr double rod_worth = 0.08;                 // Total control rod worth [Δk/k]
-inline constexpr double max_rod_speed = 2.0;              // Max rod speed [%/s]
-inline constexpr double doppler_coefficient = -1.7284e-4; // Fuel temperature coefficient [Δk/k/°C]; sized so
-                                                          // max Doppler feedback (as T_fuel -> coolant inlet
-                                                          // temp at near-zero power) exactly offsets rod
-                                                          // reactivity at rod_position = 30%, making the
-                                                          // reactor subcritical below it.
-inline constexpr double moderator_coefficient = -2.0e-4;  // Coolant/moderator temperature coefficient
-                                                          // [Δk/k/°C] (~-20 pcm/°C, typical PWR range).
-                                                          // Negative: hotter coolant (lower moderator
-                                                          // density) reduces reactivity. Independent of
-                                                          // and slower-acting than the Doppler feedback.
+inline constexpr double rod_worth = 0.08;                  // Total control rod worth [Δk/k]
+inline constexpr double max_rod_speed = 2.0;               // Max rod speed [%/s]
+inline constexpr double doppler_coefficient = -1.7284e-4;  // Fuel temperature coefficient [Δk/k/°C]; sized so
+                                                           // max Doppler feedback (as T_fuel -> coolant inlet
+                                                           // temp at near-zero power) exactly offsets rod
+                                                           // reactivity at rod_position = 30%, making the
+                                                           // reactor subcritical below it.
+inline constexpr double moderator_coefficient = -2.0e-4;   // Coolant/moderator temperature coefficient
+                                                           // [Δk/k/°C] (~-20 pcm/°C, typical PWR range).
+                                                           // Negative: hotter coolant (lower moderator
+                                                           // density) reduces reactivity. Independent of
+                                                           // and slower-acting than the Doppler feedback.
 inline constexpr double moderator_ref_temperature = 314.0; // Reference average coolant temperature [°C]
-                                                            // (= nominal full-power inlet/outlet average,
-                                                            // (290+338)/2); rho_moderator = 0 here, so
-                                                            // nominal full-power steady state (rods
-                                                            // withdrawn) is unaffected.
+                                                           // (= nominal full-power inlet/outlet average,
+                                                           // (290+338)/2); rho_moderator = 0 here, so
+                                                           // nominal full-power steady state (rods
+                                                           // withdrawn) is unaffected.
 } // namespace reactivity
 
 namespace coolant {

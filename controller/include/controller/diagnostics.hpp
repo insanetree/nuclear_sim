@@ -30,6 +30,7 @@ public:
 		double d_electrical_power; // derivative of electrical power
 		double coolant_inlet_temperature;
 		double coolant_outlet_temperature;
+		double steam_generator_effectiveness;
 		double fuel_temperature; // calculated fuel temperature from coolant outlet temperature and thermal power
 		double d_fuel_temperature;
 	};

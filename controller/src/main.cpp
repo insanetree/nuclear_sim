@@ -65,8 +65,7 @@ read_status(const controller::status_panel* panel)
 		snapshot.electrical_power = panel->electrical_power.load(std::memory_order_relaxed);
 		snapshot.coolant_inlet_temperature = panel->coolant_inlet_temperature.load(std::memory_order_relaxed);
 		snapshot.coolant_outlet_temperature = panel->coolant_outlet_temperature.load(std::memory_order_relaxed);
-		snapshot.steam_generator_effectiveness =
-			panel->steam_generator_effectiveness.load(std::memory_order_relaxed);
+		snapshot.steam_generator_effectiveness = panel->steam_generator_effectiveness.load(std::memory_order_relaxed);
 		tick2 = panel->tick_2.load(std::memory_order_acquire);
 	} while (tick1 != tick2);
 	return snapshot;
